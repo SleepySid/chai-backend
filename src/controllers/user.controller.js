@@ -1,7 +1,7 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
-import {ApiError} from "../utils/ApiError.js"
-import { User} from "../models/user.model.js"
-import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import { ApiError } from "../utils/ApiError.js"
+import { User } from "../models/user.model.js"
+import { deleteFromCloudnary, uploadOnCloudinary } from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken"
 import mongoose from "mongoose";
@@ -52,7 +52,6 @@ const registerUser = asyncHandler( async (req, res) => {
     if (existedUser) {
         throw new ApiError(409, "User with email or username already exists")
     }
-    //console.log(req.files);
 
     const avatarLocalPath = req.files?.avatar[0]?.path;
     //const coverImageLocalPath = req.files?.coverImage[0]?.path;
@@ -67,8 +66,8 @@ const registerUser = asyncHandler( async (req, res) => {
         throw new ApiError(400, "Avatar file is required")
     }
 
-    const avatar = await uploadOnCloudinary(avatarLocalPath)
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+    const avatar = await uploadOnCloudinary(avatarLocalPath,{username,email},"avatar")
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath,{username,email},"coverImage")
 
     if (!avatar) {
         throw new ApiError(400, "Avatar file is required")
@@ -294,14 +293,17 @@ const updateUserAvatar = asyncHandler(async(req, res) => {
     }
 
     //TODO: delete old image - assignment
+    const {username , email} = req.user
+    deleteFromCloudnary({username,email},"avatar")
 
-    const avatar = await uploadOnCloudinary(avatarLocalPath)
+    const avatar = await uploadOnCloudinary(avatarLocalPath , {username , email} , "avatar")
 
     if (!avatar.url) {
         throw new ApiError(400, "Error while uploading on avatar")
         
     }
-
+    
+    
     const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
@@ -327,9 +329,11 @@ const updateUserCoverImage = asyncHandler(async(req, res) => {
     }
 
     //TODO: delete old image - assignment
+    const {username , email} = req.user
+    deleteFromCloudnary({username,email},"avatar")
+    
 
-
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath ,{username,email},"coverImage" )
 
     if (!coverImage.url) {
         throw new ApiError(400, "Error while uploading on avatar")
@@ -356,7 +360,7 @@ const updateUserCoverImage = asyncHandler(async(req, res) => {
 
 const getUserChannelProfile = asyncHandler(async(req, res) => {
     const {username} = req.params
-``
+
     if (!username?.trim()) {
         throw new ApiError(400, "username is missing")
     }
